@@ -1,0 +1,21 @@
+repositories:
+  color_based_activity_recognition:
+    type: git
+    url: https://git.ni.dfki.de/incorap/color_based_activity_recognition.git
+    version: noetic
+  copda:
+    type: git
+    url: https://github.com/copda/copda.git
+    version: ai-day-demo
+  intention_recognition_msgs:
+    type: git
+    url: https://git.ni.dfki.de/incorap/intention_recognition_msgs.git
+    version: noetic
+  intention_recognition_ros:
+    type: git
+    url: https://git.ni.dfki.de/incorap/intention_recognition_ros.git
+    version: InsectHotelV2
+  mobipick_labs:
+    type: git
+    url: https://github.com/DFKI-NI/mobipick_labs.git
+    version: noetic

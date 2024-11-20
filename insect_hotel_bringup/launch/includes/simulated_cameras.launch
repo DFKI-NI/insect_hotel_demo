@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<launch>
+    <param name="worker_cameras/robot_description"
+         command="$(find xacro)/xacro '$(find pbr_gazebo)/urdf/insect_hotel_demo_cameras.urdf.xacro'" />
+
+    <!-- spawn 2 cameras looking at the worker area to monitor the assembly process and the parts -->
+    <node name="worker_cameras" pkg="gazebo_ros" type="spawn_model"
+        args="-urdf -param worker_cameras/robot_description -model worker_cameras -x 18.3 -y 15.0 -z 2.0 -Y 0.0"
+        respawn="false" output="screen" />
+    <!-- robot state publisher for insect hotel cameras -->
+    <node name="worker_cameras_rsp" pkg="robot_state_publisher"
+        type="robot_state_publisher" ns="worker_cameras" />
+    <node name="worker_cameras_tf" type="static_transform_publisher" pkg="tf2_ros" args="0 0 0 0 0 0 /map /worker_cameras_link"/>
+
+</launch>

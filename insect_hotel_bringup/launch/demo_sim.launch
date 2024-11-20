@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="world" default="pbr_cic" doc="options: pbr_moelk, pbr_cic" />
+  <arg name="world_config" default="insect_hotel" doc="objects arrangement, options: moelk_tables, cic_tables, truck_assembly, insect_hotel" />
+
+  <!-- the pose where to spawn the robot in simulation -->
+  <arg name="robot_x"   default="20.00" />
+  <arg name="robot_y"   default="15.00" />
+  <arg name="robot_yaw" default="0.0" />
+
+  <!-- controls the simulation speed -->
+  <arg name="physics_profile" default="fast" doc="options: slow, fast" />
+
+  <!-- if true, gzclient is started -->
+  <arg name="gui" default="true" />
+
+  <!-- tables demo gazebo simulation -->
+  <include file="$(find mobipick_gazebo)/launch/mobipick/tables_demo.launch" >
+    <arg name="robot_x"      value="$(arg robot_x)" />
+    <arg name="robot_y"      value="$(arg robot_y)" />
+    <arg name="robot_yaw"    value="$(arg robot_yaw)" />
+    <arg name="world"        value="$(arg world)" />
+    <arg name="world_config" value="$(arg world_config)" />
+    <arg name="physics_profile" value="$(arg physics_profile)" />
+    <arg name="gui" value="$(arg gui)" />
+  </include>
+
+  <!-- automatically unpause gazebo simulation after some time -->
+  <node pkg="pbr_gazebo" type="gazebo_unpauser" name="gazebo_unpauser" output="screen" />
+
+  <!-- object publisher for pick_n_place demo -->
+  <node name="gazebo_object_publisher" pkg="mobipick_pick_n_place" type="gazebo_object_publisher" ns="mobipick" output="screen">
+    <param name="tf_prefix"  value="mobipick" />
+    <param name="robot_name" value="mobipick" />
+  </node>
+
+  <!-- node to publish the camera frustum as visualisation marker -->
+  <node pkg="mobipick_pick_n_place" type="camera_marker_publisher" name="camera_marker_publisher" output="screen" >
+    <param name="camera_frame" value="mobipick/eef_main_cam_depth_frame" />
+  </node>
+
+  <!-- ::::: Navigation ::::: -->
+
+  <!-- fake localisation (for simulation only) -->
+  <include file="$(find mir_gazebo)/launch/fake_localization.launch" ns="mobipick">
+    <arg name="odom_frame_id" value="mobipick/odom" />
+    <arg name="base_frame_id" value="mobipick/base_footprint" />
+  </include>
+  <!-- navigation stack (move base) -->
+  <include file="$(find tables_demo_bringup)/launch/includes/navigation/cic_tables.launch"/>
+
+  <!-- ::::: Manipulation , MoveIt: arm movement ::::: -->
+  <include file="$(find mobipick_moveit_config)/launch/moveit_planning_execution.launch">
+    <arg name="use_pointcloud" value="false"/>
+  </include>
+
+  <include file="$(find insect_hotel_bringup)/launch/bringup.launch" >
+    <arg name="simulation" value="true" />
+    <arg name="world_config" value="cic_tables" />
+  </include>
+</launch>

@@ -1,0 +1,42 @@
+<?xml version="1.0" ?>
+<launch>
+    <!-- object detection args -->
+    <arg name="simulation" default="false" />
+    <arg name="worker_cam_detection_topic" value="/worker_cam/rgb/logical_image" if="$(arg simulation)" />
+    <arg name="inventory_cam_detection_topic" value="/inventory_cam/rgb/logical_image" if="$(arg simulation)" />
+    <arg name="worker_cam_detection_topic" value="/worker_yolo6d_cpp_node/poses" unless="$(arg simulation)" />
+    <arg name="inventory_cam_detection_topic" value="/inventory_yolo6d_cpp_node/poses" unless="$(arg simulation)" />
+
+    <!-- intention recognition args-->
+    <arg name="intention_recognition_node_name" default="/intention_recognition_node" />
+    <arg name="problem_setup" default="HotelA.json" doc=""/>
+    <arg name="mockup_gui" value="false" />
+
+
+    <group if="$(arg simulation)">
+        <!-- spawn cameras in simulation -->
+        <include file="$(find insect_hotel_bringup)/launch/includes/simulated_cameras.launch" />
+    </group>
+
+    <!-- robot task planning args -->
+    <arg name="task_server_name" default="/mobipick/task_planning"/>
+
+    <!-- activity recognition server: handles observation requests from intention recognition POMDP module -->
+    <node pkg="color_based_activity_recognition" type="activity_recognition_node" name="intention_perception_node" output="screen">
+        <param name="worker_cam_detection_topic" value="$(arg worker_cam_detection_topic)" />
+        <param name="inventory_cam_detection_topic" value="$(arg inventory_cam_detection_topic)" />
+        <param name="intention_recognition_node_name" value="$(arg intention_recognition_node_name)"/>
+        <param name="simulation" value="$(arg simulation)" />
+    </node>
+
+    <!-- hierarchical planning task server: handles requests from intention recognition to bring parts using the robot -->
+    <node pkg="tables_demo_planning" type="task_server_node.py" name="task_server_node" output="screen">
+        <param name="task_server_name" value="$(arg task_server_name)"/>
+    </node>
+
+    <!-- intention recognition based on POMDP -->
+    <include file="$(find intention_recognition_ros)/launch/insect_hotel.launch">
+        <arg name="mockup_gui" value="$(arg mockup_gui)" />
+        <arg name="problem_setup" value="$(arg problem_setup)"/>
+    </include>
+</launch>
