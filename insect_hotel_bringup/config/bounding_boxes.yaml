@@ -1,0 +1,49 @@
+table_1:
+  x: 1.4
+  y: 0.7
+  z: 0.351
+
+table_2:
+  x: 0.8
+  y: 0.8
+  z: 0.357
+
+table_3:
+  x: 0.8
+  y: 0.8
+  z: 0.357
+
+klt:
+  x: 0.3
+  y: 0.2
+  z: 0.148
+
+bright_green_part:
+  x: 0.23
+  y: 0.08
+  z: 0.0065
+
+dark_green_part:
+  x: 0.24
+  y: 0.1115
+  z: 0.025
+
+magenta_part:
+  x: 0.125
+  y: 0.093
+  z: 0.0065
+  
+purple_part:
+  x: 0.14
+  y: 0.08
+  z: 0.0065
+
+yellow_part:
+  x: 0.125
+  y: 0.093
+  z: 0.0065
+
+red_part:
+  x: 0.23
+  y: 0.08
+  z: 0.0065

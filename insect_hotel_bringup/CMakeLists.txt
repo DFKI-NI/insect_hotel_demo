@@ -5,3 +5,12 @@ project(insect_hotel_bringup)
 find_package(catkin REQUIRED COMPONENTS)
 
 catkin_package()
+
+#############
+## Install ##
+#############
+
+catkin_install_python(PROGRAMS
+  nodes/simulate_worker_gazebo.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)

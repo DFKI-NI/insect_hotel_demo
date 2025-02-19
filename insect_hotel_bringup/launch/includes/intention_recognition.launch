@@ -16,6 +16,10 @@
     <group if="$(arg simulation)">
         <!-- spawn cameras in simulation -->
         <include file="$(find insect_hotel_bringup)/launch/includes/simulated_cameras.launch" />
+        <node name="sim_worker" pkg="insect_hotel_bringup" type="simulate_worker_gazebo.py" output="screen">
+            <param name="worker_time_between_actions" value="10.0" />
+            <param name="bounding_boxes_path" value="$(find insect_hotel_bringup)/config/bounding_boxes.yaml"/>
+        </node>
     </group>
 
     <!-- robot task planning args -->
@@ -27,6 +31,9 @@
         <param name="inventory_cam_detection_topic" value="$(arg inventory_cam_detection_topic)" />
         <param name="intention_recognition_node_name" value="$(arg intention_recognition_node_name)"/>
         <param name="simulation" value="$(arg simulation)" />
+        <param name="storage_observation_accuracy" value="1.0" />
+        <param name="assembly_progress_accuracy" value="1.0" />
+        <param name="hotel_type_accuracy" value="1.0" />
     </node>
 
     <!-- hierarchical planning task server: handles requests from intention recognition to bring parts using the robot -->
