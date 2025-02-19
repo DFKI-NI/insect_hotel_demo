@@ -24,6 +24,8 @@ class SimulateWorkerGazebo:
 
         #Time in seconds between each simulated worker action
         self.worker_time_between_actions = rospy.get_param("~worker_time_between_actions", default=30.0)
+        self.random_worker_actions = rospy.get_param("~random_worker_actions", default=False)
+        self.prob_to_skip_action = rospy.get_param("~prob_to_skip_action", default=0.8)
 
         # load xacro files for insect hotel parts
         insect_hotel_parts_folder = os.path.join(
@@ -84,10 +86,10 @@ class SimulateWorkerGazebo:
         rospy.wait_for_service(set_model_srv_name)
 
         self.parts_in_storage = [
+            "purple_part_2",
             "bright_green_part_2",
             "red_part_2",
-            "purple_part_1",
-            "magenta_part_1",
+            "magenta_part_2",
         ]
 
         self.parts_on_assembly = []
@@ -206,11 +208,14 @@ class SimulateWorkerGazebo:
 
         return pose
 
-    def perform_action(self) -> bool:
+    def perform_action(self, random_order: bool = False) -> bool:
         try:
-            randomized_parts_in_storage = numpy.random.permutation(self.parts_in_storage)
+            if random_order:
+                parts_in_storage = numpy.random.permutation(self.parts_in_storage)
+            else:
+                parts_in_storage = deepcopy(self.parts_in_storage)
             chosen_part = None
-            for part in randomized_parts_in_storage:
+            for part in parts_in_storage:
                 if part[:-2] not in self.parts_on_assembly:
                     chosen_part = part
                     break
@@ -232,7 +237,6 @@ class SimulateWorkerGazebo:
         for fact in facts:
             if fact.name == "on" and "klt" in fact.values[0] and "table_1" in fact.values[1]:
                 for in_fact in facts:
-                    print("Fact: ", in_fact, " , Equal: ", fact.values[0] == in_fact.values[1])
                     if in_fact.name == "in" and fact.values[0] == in_fact.values[1]:
                         self.set_model_state(in_fact.values[0], self.create_pose_obj(18.45, 14.0, 0.8, 0.0, 0.0, 0.0))
                         self.parts_in_storage.append(in_fact.values[0])
@@ -287,7 +291,9 @@ class SimulateWorkerGazebo:
                 action_performed = self.move_parts_brought_by_robot()
                 
                 if not action_performed:
-                    action_result = self.perform_action()
+                    skip = random.random() < self.prob_to_skip_action
+                    if not skip:
+                        action_result = self.perform_action(self.random_worker_actions)
         except rospy.ROSInterruptException as e:
             print(e)
 

@@ -5,7 +5,7 @@
   <arg name="objects_of_interest" default="[klt, red_part, yellow_part, bright_green_part, dark_green_part, purple_part, magenta_part]"/>
 
   <arg name="allow_search_same_table" default="true" doc="allows to search tables again without restarting the planning domain, only works when using hierarchical planning"/>
-  <arg name="tables_to_search_at" default="[table_2, table_3]" doc="list of table names to search at during item and klt search"/>
+  <arg name="tables_to_search_at" default="[table_2, table_3, table_4]" doc="list of table names to search at during item and klt search"/>
 
   <!-- please run separately! : -->
   <!--roslaunch mobipick_bringup mobipick_bringup_both.launch -->
