@@ -17,10 +17,11 @@
         <!-- spawn cameras in simulation -->
         <include file="$(find insect_hotel_bringup)/launch/includes/simulated_cameras.launch" />
         <node name="sim_worker" pkg="insect_hotel_bringup" type="simulate_worker_gazebo.py" output="screen">
-            <param name="worker_time_between_actions" value="10.0" />
+            <param name="worker_time_between_actions" value="20.0" />
             <param name="random_worker_actions" value="False" />
             <param name="prob_to_skip_action" value="0.2" />
-            <param name="bounding_boxes_path" value="$(find insect_hotel_bringup)/config/bounding_boxes.yaml"/>
+            <rosparam command="load" file="$(find insect_hotel_bringup)/config/bounding_boxes.yaml" ns="bounding_boxes"/>
+            <rosparam command="load" file="$(find insect_hotel_bringup)/config/parts_in_storage.yaml" ns="parts_in_storage"/>
         </node>
     </group>
 

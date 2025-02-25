@@ -12,19 +12,26 @@ from copy import deepcopy
 
 from gazebo_msgs.srv import SetModelState, SpawnModel
 from gazebo_msgs.msg import ModelState, ModelStates
-from geometry_msgs.msg import Pose, Point
+from geometry_msgs.msg import Pose, Point, Quaternion
 
 from grasplan.tools.support_plane_tools import well_separated
-from symbolic_fact_generation.common.collision_checking import oriented_collision_check_with_obj_size
+from symbolic_fact_generation.common.collision_checking import (
+    oriented_collision_check_with_obj_size,
+)
 from symbolic_fact_generation.common.fact import Fact
+
 
 class SimulateWorkerGazebo:
     def __init__(self):
         rospy.init_node("simulate_worker_gazebo_node")
 
-        #Time in seconds between each simulated worker action
-        self.worker_time_between_actions = rospy.get_param("~worker_time_between_actions", default=30.0)
-        self.random_worker_actions = rospy.get_param("~random_worker_actions", default=False)
+        # Time in seconds between each simulated worker action
+        self.worker_time_between_actions = rospy.get_param(
+            "~worker_time_between_actions", default=30.0
+        )
+        self.random_worker_actions = rospy.get_param(
+            "~random_worker_actions", default=False
+        )
         self.prob_to_skip_action = rospy.get_param("~prob_to_skip_action", default=0.8)
 
         # load xacro files for insect hotel parts
@@ -49,31 +56,30 @@ class SimulateWorkerGazebo:
         yellow_part_urdf_path = os.path.join(
             insect_hotel_parts_folder, "yellow_part.urdf.xacro"
         )
-        self.bright_green_part_urdf = xacro.process_file(
+        bright_green_part_urdf = xacro.process_file(
             bright_green_part_urdf_path
         ).toxml()
-        self.dark_green_part_urdf = xacro.process_file(
+        dark_green_part_urdf = xacro.process_file(
             dark_green_part_urdf_path
         ).toxml()
-        self.magenta_part_urdf = xacro.process_file(magenta_part_urdf_path).toxml()
-        self.purple_part_urdf = xacro.process_file(purple_part_urdf_path).toxml()
-        self.red_part_urdf = xacro.process_file(red_part_urdf_path).toxml()
-        self.yellow_part_urdf = xacro.process_file(yellow_part_urdf_path).toxml()
+        magenta_part_urdf = xacro.process_file(magenta_part_urdf_path).toxml()
+        purple_part_urdf = xacro.process_file(purple_part_urdf_path).toxml()
+        red_part_urdf = xacro.process_file(red_part_urdf_path).toxml()
+        yellow_part_urdf = xacro.process_file(yellow_part_urdf_path).toxml()
 
         # Read bounding boxes
-        try:
-            bounding_boxes_path = rospy.get_param(
-                "~bounding_boxes_path", default="config/bounding_boxes.yaml"
+        self.bounding_boxes = {}
+        bounding_boxes_param = rospy.get_param(
+            "~bounding_boxes", default="/sim_worker/bounding_boxes"
+        )
+
+        # convert to Points
+        for obj, bb_size in bounding_boxes_param.items():
+            self.bounding_boxes[obj] = Point(
+                bb_size["x"],
+                bb_size["y"],
+                bb_size["z"],
             )
-            yamlfile = open(bounding_boxes_path, "r")
-            self.bounding_boxes_yaml = safe_load(yamlfile)
-            # convert to Points
-            for key in self.bounding_boxes_yaml:
-                self.bounding_boxes_yaml[key] = Point(self.bounding_boxes_yaml[key]["x"], self.bounding_boxes_yaml[key]["y"], self.bounding_boxes_yaml[key]["z"])
-        except FileNotFoundError as file_exc:
-            rospy.logerr(f"YAML File not found:\n {file_exc}")
-        except YAMLError as yaml_exc:
-            rospy.logerr(f"Error while loading YAML file:\n {yaml_exc}")
 
         # Gazebo service to spawn new parts
         spawn_sdf_model_srv_name = "gazebo/spawn_urdf_model"
@@ -85,12 +91,22 @@ class SimulateWorkerGazebo:
         self.set_model_srv = rospy.ServiceProxy(set_model_srv_name, SetModelState)
         rospy.wait_for_service(set_model_srv_name)
 
-        self.parts_in_storage = [
-            "purple_part_2",
-            "bright_green_part_2",
-            "red_part_2",
-            "magenta_part_2",
-        ]
+        self.part_in_storage_pose = {
+            "bright_green_part": [bright_green_part_urdf, Pose(position=Point(18.45, 14.0, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "dark_green_part": [dark_green_part_urdf, Pose(position=Point(18.15, 13.7, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "magenta_part": [magenta_part_urdf, Pose(position=Point(18.15, 14.0, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "purple_part": [purple_part_urdf, Pose(position=Point(18.30, 14.0, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "red_part": [red_part_urdf, Pose(position=Point(18.45, 13.7, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "yellow_part": [yellow_part_urdf, Pose(position=Point(18.30, 13.7, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+        }
+
+        self.parts_in_storage = []
+
+        parts_in_storage = rospy.get_param("~parts_in_storage", default="/sim_worker/parts_in_storage")
+        for part, amount in parts_in_storage.items():
+            for i in range(amount):
+                self.spawn_gazebo_object(part + "_" + str(i + 2), *self.part_in_storage_pose[part])
+                self.parts_in_storage.append(part + "_" + str(i + 2))
 
         self.parts_on_assembly = []
 
@@ -102,15 +118,23 @@ class SimulateWorkerGazebo:
         ]
 
         self.container_objs = ["klt"]
-        self.part_objs = ["bright_green_part", "dark_green_part", "red_part", "yellow_part", "purple_part", "magenta_part"]
+        self.part_objs = [
+            "bright_green_part",
+            "dark_green_part",
+            "red_part",
+            "yellow_part",
+            "purple_part",
+            "magenta_part",
+        ]
 
     def receive_model_states(self):
         try:
-            model_states = rospy.wait_for_message("/gazebo/model_states", ModelStates, timeout=10.0)
+            model_states = rospy.wait_for_message(
+                "/gazebo/model_states", ModelStates, timeout=10.0
+            )
         except rospy.ROSException as e:
             rospy.logerr("Could not get model states from Gazebo: %s" % e)
         return model_states
-    
 
     def create_facts(self, model_states, surface_obj_str, z_threshold=0.1) -> bool:
         container_obj_ids = []
@@ -121,42 +145,72 @@ class SimulateWorkerGazebo:
             elif model_states.name[i][:-2] in self.container_objs:
                 container_obj_ids.append(i)
         if surface_obj_id == -1:
-            rospy.logerr(f"Could not find surface object {surface_obj_str} in gazebo model states")
+            rospy.logerr(
+                f"Could not find surface object {surface_obj_str} in gazebo model states"
+            )
             return False
-        
-        surface_pose = deepcopy(model_states.pose[surface_obj_id])
-        surface_size = deepcopy(self.bounding_boxes_yaml[surface_obj_str])
 
-        surface_pose.position.z = surface_pose.position.z + surface_size.z * 2 + z_threshold / 2
+        surface_pose = deepcopy(model_states.pose[surface_obj_id])
+        surface_size = deepcopy(self.bounding_boxes[surface_obj_str])
+
+        surface_pose.position.z = (
+            surface_pose.position.z + surface_size.z * 2 + z_threshold / 2
+        )
         surface_size.z = z_threshold
 
         facts = []
 
         for i in range(len(model_states.name)):
-            if model_states.name[i][:-2] in self.part_objs or model_states.name[i][:-2] in self.container_objs:
+            if (
+                model_states.name[i][:-2] in self.part_objs
+                or model_states.name[i][:-2] in self.container_objs
+            ):
                 obj_pose = model_states.pose[i]
-                obj_size = self.bounding_boxes_yaml[model_states.name[i][:-2]]
-                if oriented_collision_check_with_obj_size(surface_pose, surface_size, obj_pose, obj_size, padding=0.01):
-                    facts.append(Fact(name="on", values=[model_states.name[i], surface_obj_str]))
+                obj_size = self.bounding_boxes[model_states.name[i][:-2]]
+                if oriented_collision_check_with_obj_size(
+                    surface_pose, surface_size, obj_pose, obj_size, padding=0.01
+                ):
+                    facts.append(
+                        Fact(name="on", values=[model_states.name[i], surface_obj_str])
+                    )
 
         for i in container_obj_ids:
             container_obj_pose = model_states.pose[i]
-            container_obj_size = self.bounding_boxes_yaml[model_states.name[i][:-2]]
+            container_obj_size = self.bounding_boxes[model_states.name[i][:-2]]
             for j in range(len(model_states.name)):
                 if model_states.name[j][:-2] in self.part_objs:
                     obj_pose = model_states.pose[j]
-                    obj_size = self.bounding_boxes_yaml[model_states.name[j][:-2]]
-                    if self.check_in_condition(obj_pose, obj_size, container_obj_pose, container_obj_size):
-                        facts.append(Fact(name="in", values=[model_states.name[j], model_states.name[i]]))
+                    obj_size = self.bounding_boxes[model_states.name[j][:-2]]
+                    if self.check_in_condition(
+                        obj_pose, obj_size, container_obj_pose, container_obj_size
+                    ):
+                        facts.append(
+                            Fact(
+                                name="in",
+                                values=[model_states.name[j], model_states.name[i]],
+                            )
+                        )
         return facts
-    
-    def check_in_condition(self, obj_pose, obj_size, container_obj_pose, container_obj_size) -> bool:
-        if oriented_collision_check_with_obj_size(container_obj_pose, container_obj_size, obj_pose, obj_size):
+
+    def check_in_condition(
+        self, obj_pose, obj_size, container_obj_pose, container_obj_size
+    ) -> bool:
+        if oriented_collision_check_with_obj_size(
+            container_obj_pose, container_obj_size, obj_pose, obj_size
+        ):
             # calculate euclidean distance to check if obj is in container_obj
-            dist = numpy.linalg.norm((obj_pose.position.x - container_obj_pose.position.x,
-                                    obj_pose.position.y - container_obj_pose.position.y,
-                                    obj_pose.position.z - container_obj_pose.position.z))
-            radius = max(container_obj_size.x / 2.0, container_obj_size.y / 2.0, container_obj_size.z / 2.0)
+            dist = numpy.linalg.norm(
+                (
+                    obj_pose.position.x - container_obj_pose.position.x,
+                    obj_pose.position.y - container_obj_pose.position.y,
+                    obj_pose.position.z - container_obj_pose.position.z,
+                )
+            )
+            radius = max(
+                container_obj_size.x / 2.0,
+                container_obj_size.y / 2.0,
+                container_obj_size.z / 2.0,
+            )
             # remove 10% of radius for objects colliding with the outside wall
             # still detected as IN for rectangular container objects like klt if close to it
             radius = radius - radius * 0.1
@@ -226,22 +280,32 @@ class SimulateWorkerGazebo:
 
             result = self.set_model_state(chosen_part, target_poses[0])
             if result:
-               self.parts_on_assembly.append(chosen_part[:-2])
-               self.parts_in_storage.remove(chosen_part)
+                self.parts_on_assembly.append(chosen_part[:-2])
+                self.parts_in_storage.remove(chosen_part)
             return result
         except IndexError:
             return False
-        
+
     def move_parts_brought_by_robot(self) -> bool:
         facts = self.create_facts(self.get_model_states_from_gazebo(), "table_1")
         for fact in facts:
-            if fact.name == "on" and "klt" in fact.values[0] and "table_1" in fact.values[1]:
+            if (
+                fact.name == "on"
+                and "klt" in fact.values[0]
+                and "table_1" in fact.values[1]
+            ):
                 for in_fact in facts:
                     if in_fact.name == "in" and fact.values[0] == in_fact.values[1]:
-                        self.set_model_state(in_fact.values[0], self.create_pose_obj(18.45, 14.0, 0.8, 0.0, 0.0, 0.0))
+                        self.set_model_state(
+                            in_fact.values[0],
+                            self.create_pose_obj(18.45, 14.0, 0.8, 0.0, 0.0, 0.0),
+                        )
                         self.parts_in_storage.append(in_fact.values[0])
                         break
-                self.set_model_state(fact.values[0], self.create_pose_obj(17.23, 15.65, 1.0, 0.0, 0.0, 0.0))
+                self.set_model_state(
+                    fact.values[0],
+                    self.create_pose_obj(17.23, 15.65, 1.0, 0.0, 0.0, 0.0),
+                )
                 return True
         return False
 
@@ -289,7 +353,7 @@ class SimulateWorkerGazebo:
             while not rospy.is_shutdown():
                 rate.sleep()
                 action_performed = self.move_parts_brought_by_robot()
-                
+
                 if not action_performed:
                     skip = random.random() < self.prob_to_skip_action
                     if not skip:
