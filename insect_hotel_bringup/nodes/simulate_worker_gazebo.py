@@ -92,12 +92,12 @@ class SimulateWorkerGazebo:
         rospy.wait_for_service(set_model_srv_name)
 
         self.part_in_storage_pose = {
-            "bright_green_part": [bright_green_part_urdf, Pose(position=Point(18.45, 14.0, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
-            "dark_green_part": [dark_green_part_urdf, Pose(position=Point(18.15, 13.7, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
-            "magenta_part": [magenta_part_urdf, Pose(position=Point(18.15, 14.0, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
-            "purple_part": [purple_part_urdf, Pose(position=Point(18.30, 14.0, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
-            "red_part": [red_part_urdf, Pose(position=Point(18.45, 13.7, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
-            "yellow_part": [yellow_part_urdf, Pose(position=Point(18.30, 13.7, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "bright_green_part": [bright_green_part_urdf, Pose(position=Point(18.39, 14.0, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "dark_green_part": [dark_green_part_urdf, Pose(position=Point(18.09, 13.7, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "magenta_part": [magenta_part_urdf, Pose(position=Point(18.09, 14.0, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "purple_part": [purple_part_urdf, Pose(position=Point(18.24, 14.0, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "red_part": [red_part_urdf, Pose(position=Point(18.39, 13.7, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "yellow_part": [yellow_part_urdf, Pose(position=Point(18.24, 13.7, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
         }
 
         self.parts_in_storage = []

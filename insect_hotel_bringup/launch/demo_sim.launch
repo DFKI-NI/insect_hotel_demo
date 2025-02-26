@@ -47,7 +47,7 @@
     <arg name="base_frame_id" value="mobipick/base_footprint" />
   </include>
   <!-- navigation stack (move base) -->
-  <include file="$(find tables_demo_bringup)/launch/includes/navigation/cic_tables.launch"/>
+  <include file="$(find insect_hotel_bringup)/launch/includes/navigation/cic_insect_hotel_sim.launch"/>
 
   <!-- ::::: Manipulation , MoveIt: arm movement ::::: -->
   <include file="$(find mobipick_moveit_config)/launch/moveit_planning_execution.launch">
