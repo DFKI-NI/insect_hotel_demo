@@ -28,6 +28,11 @@ dark_green_part:
   y: 0.1115
   z: 0.025
 
+black_part:
+  x: 0.24
+  y: 0.1115
+  z: 0.025
+
 magenta_part:
   x: 0.125
   y: 0.093

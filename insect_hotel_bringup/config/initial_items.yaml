@@ -11,4 +11,5 @@ initial_item_locations: {
     "dark_green_part_1": "anywhere",
     "magenta_part_1": "anywhere",
     "purple_part_1": "anywhere",
+    "black_part_1": "anywhere",
 }
