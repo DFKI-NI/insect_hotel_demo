@@ -29,6 +29,11 @@
 
     <!-- force torque observer -->
     <node name="ft_observer" pkg="mobipick_pick_n_place" type="ft_observer_sim.py" ns="mobipick" output="screen" />
+
+    <!-- ::::: Grasp planning ::::: -->
+    <include file="$(find tables_demo_bringup)/launch/includes/grasp_planning.launch">
+      <arg name="planning_scene_config" value="$(find insect_hotel_bringup)/config/$(arg world_config)_planning_scene.yaml" />
+    </include>
   </group>
 
   <group unless="$(arg simulation)">
@@ -45,12 +50,12 @@
 
     <!-- color classification -->
     <include file="$(find insect_hotel_bringup)/launch/includes/color_classification.launch"/>
+  
+    <!-- ::::: Grasp planning ::::: -->
+    <include file="$(find tables_demo_bringup)/launch/includes/grasp_planning.launch">
+      <arg name="planning_scene_config" value="$(find tables_demo_bringup)/config/$(arg world_config)_planning_scene.yaml" />
+    </include>
   </group>
-
-  <!-- ::::: Grasp planning ::::: -->
-  <include file="$(find tables_demo_bringup)/launch/includes/grasp_planning.launch">
-    <arg name="planning_scene_config" value="$(find tables_demo_bringup)/config/$(arg world_config)_planning_scene.yaml" />
-  </include>
 
   <!-- ::::: Place object ::::: -->
   <include file="$(find tables_demo_bringup)/launch/includes/place.launch">

@@ -56,6 +56,6 @@
 
   <include file="$(find insect_hotel_bringup)/launch/bringup.launch" >
     <arg name="simulation" value="true" />
-    <arg name="world_config" value="cic_tables" />
+    <arg name="world_config" value="$(arg world_config)" />
   </include>
 </launch>
