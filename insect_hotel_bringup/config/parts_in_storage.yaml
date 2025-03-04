@@ -1,6 +1,8 @@
 purple_part: 1
 bright_green_part: 1
-red_part: 1
-yellow_part: 0
+red_part: 0
+orange_part: 1
+yellow_part: 1
 magenta_part: 1
 dark_green_part: 0
+black_part: 0

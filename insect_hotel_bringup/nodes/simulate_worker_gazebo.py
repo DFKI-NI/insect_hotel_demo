@@ -32,6 +32,7 @@ class SimulateWorkerGazebo:
         self.random_worker_actions = rospy.get_param(
             "~random_worker_actions", default=False
         )
+        
         self.prob_to_skip_action = rospy.get_param("~prob_to_skip_action", default=0.8)
 
         # load xacro files for insect hotel parts
@@ -56,6 +57,12 @@ class SimulateWorkerGazebo:
         yellow_part_urdf_path = os.path.join(
             insect_hotel_parts_folder, "yellow_part.urdf.xacro"
         )
+        black_urdf_path = os.path.join(
+            insect_hotel_parts_folder, "black_part.urdf.xacro"
+        )
+        orange_part_urdf_path = os.path.join(
+            insect_hotel_parts_folder, "orange_part.urdf.xacro"
+        )
         bright_green_part_urdf = xacro.process_file(
             bright_green_part_urdf_path
         ).toxml()
@@ -66,6 +73,8 @@ class SimulateWorkerGazebo:
         purple_part_urdf = xacro.process_file(purple_part_urdf_path).toxml()
         red_part_urdf = xacro.process_file(red_part_urdf_path).toxml()
         yellow_part_urdf = xacro.process_file(yellow_part_urdf_path).toxml()
+        black_part_urdf = xacro.process_file(black_urdf_path).toxml()
+        orange_part_urdf = xacro.process_file(orange_part_urdf_path).toxml()
 
         # Read bounding boxes
         self.bounding_boxes = {}
@@ -92,27 +101,34 @@ class SimulateWorkerGazebo:
         rospy.wait_for_service(set_model_srv_name)
 
         self.part_in_storage_pose = {
-            "bright_green_part": [bright_green_part_urdf, Pose(position=Point(18.39, 14.0, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
-            "dark_green_part": [dark_green_part_urdf, Pose(position=Point(18.09, 13.7, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
-            "magenta_part": [magenta_part_urdf, Pose(position=Point(18.09, 14.0, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
-            "purple_part": [purple_part_urdf, Pose(position=Point(18.24, 14.0, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
-            "red_part": [red_part_urdf, Pose(position=Point(18.39, 13.7, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
-            "yellow_part": [yellow_part_urdf, Pose(position=Point(18.24, 13.7, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "bright_green_part": [bright_green_part_urdf, Pose(position=Point(18.46, 14.0, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "dark_green_part": [dark_green_part_urdf, Pose(position=Point(18.17, 13.7, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "magenta_part": [magenta_part_urdf, Pose(position=Point(18.17, 14.0, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "purple_part": [purple_part_urdf, Pose(position=Point(18.33, 14.0, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "red_part": [red_part_urdf, Pose(position=Point(18.46, 13.7, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "yellow_part": [yellow_part_urdf, Pose(position=Point(18.33, 13.7, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "black_part": [black_part_urdf, Pose(position=Point(18.03, 13.7, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
+            "orange_part": [orange_part_urdf, Pose(position=Point(18.03, 14.0, 0.8), orientation=Quaternion(0.0, 0.0, 0.707, 0.707))],
         }
 
         self.parts_in_storage = []
+        self.hotel_type = 0
 
         parts_in_storage = rospy.get_param("~parts_in_storage", default="/sim_worker/parts_in_storage")
         for part, amount in parts_in_storage.items():
             for i in range(amount):
                 self.spawn_gazebo_object(part + "_" + str(i + 2), *self.part_in_storage_pose[part])
                 self.parts_in_storage.append(part + "_" + str(i + 2))
+                if part == "red_part":
+                    self.hotel_type = 0
+                elif part == "orange_part":
+                    self.hotel_type = 1
 
         self.parts_on_assembly = []
 
         self.table_1_place_plane = [
-            Point(18.05, 15.1, 0.721),
-            Point(18.55, 15.1, 0.721),
+            Point(18.05, 14.9, 0.721),
+            Point(18.55, 14.9, 0.721),
             Point(18.55, 14.6, 0.721),
             Point(18.05, 14.6, 0.721),
         ]
@@ -125,6 +141,8 @@ class SimulateWorkerGazebo:
             "yellow_part",
             "purple_part",
             "magenta_part",
+            "orange_part",
+            "black_part",
         ]
 
     def receive_model_states(self):
@@ -271,8 +289,13 @@ class SimulateWorkerGazebo:
             chosen_part = None
             for part in parts_in_storage:
                 if part[:-2] not in self.parts_on_assembly:
-                    chosen_part = part
-                    break
+                    if part[:-2] == "red_part" and self.hotel_type != 0:
+                        continue
+                    elif part[:-2] == "orange_part" and self.hotel_type != 1:
+                        continue
+                    else:
+                        chosen_part = part
+                        break
             if chosen_part is None:
                 return False
 
@@ -298,7 +321,7 @@ class SimulateWorkerGazebo:
                     if in_fact.name == "in" and fact.values[0] == in_fact.values[1]:
                         self.set_model_state(
                             in_fact.values[0],
-                            self.create_pose_obj(18.45, 14.0, 0.8, 0.0, 0.0, 0.0),
+                            self.part_in_storage_pose[in_fact.values[0][:-2]][1] #self.create_pose_obj(18.45, 14.0, 0.8, 0.0, 0.0, 0.0),
                         )
                         self.parts_in_storage.append(in_fact.values[0])
                         break

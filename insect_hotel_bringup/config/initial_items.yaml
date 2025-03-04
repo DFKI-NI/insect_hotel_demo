@@ -5,6 +5,8 @@ initial_item_locations: {
     "klt_4": "anywhere",
     "klt_5": "anywhere",
     "klt_6": "anywhere",
+    "klt_7": "anywhere",
+    "klt_8": "anywhere",
     "red_part_1": "anywhere",
     "yellow_part_1": "anywhere",
     "bright_green_part_1": "anywhere",
@@ -12,4 +14,5 @@ initial_item_locations: {
     "magenta_part_1": "anywhere",
     "purple_part_1": "anywhere",
     "black_part_1": "anywhere",
+    "orange_part_1": "anywhere",
 }
