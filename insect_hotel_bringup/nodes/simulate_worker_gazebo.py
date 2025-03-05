@@ -375,12 +375,11 @@ class SimulateWorkerGazebo:
         try:
             while not rospy.is_shutdown():
                 rate.sleep()
-                action_performed = self.move_parts_brought_by_robot()
+                self.move_parts_brought_by_robot()
 
-                if not action_performed:
-                    skip = random.random() < self.prob_to_skip_action
-                    if not skip:
-                        action_result = self.perform_action(self.random_worker_actions)
+                skip = random.random() < self.prob_to_skip_action
+                if not skip:
+                    action_result = self.perform_action(self.random_worker_actions)
         except rospy.ROSInterruptException as e:
             print(e)
 
