@@ -138,7 +138,7 @@ class SimulateWorkerGazebo:
         parts_in_storage = rospy.get_param("~parts_in_storage", default="/sim_worker/parts_in_storage")
         for part, amount in parts_in_storage.items():
             for i in range(amount):
-                #self.spawn_gazebo_object(part + "_" + str(i + 2), *self.part_in_storage_pose[part])
+                self.spawn_gazebo_object(part + "_" + str(i + 2), *self.part_in_storage_pose[part])
                 self.parts_in_storage.append(part + "_" + str(i + 2))
                 self.parts_in_storage_ids.append(self.part_objs.index(part))
 
@@ -290,7 +290,6 @@ class SimulateWorkerGazebo:
             # if a wrong part is on the assembly table, move part back to storage with given probability
             if self.wrong_part_assembled and random.random() < self.prob_to_fix_wrong_part:
                 self.part_to_storage(self.wrong_part_assembled.pop())
-                print("FIXED WRONG PART: ", self.wrong_part_assembled)
                 return True
             
             if self.hotel_type == 1:
@@ -302,9 +301,6 @@ class SimulateWorkerGazebo:
 
             if random_order:
                 available_correct_parts = numpy.random.permutation(available_correct_parts)
-
-            print("WRONG PARTS: ", available_wrong_parts)
-            print("AVAILABLE CORRECT PARTS: ", available_correct_parts)
 
             chosen_part = None
             if available_wrong_parts and random.random() < self.prob_to_take_wrong_part:
@@ -321,8 +317,6 @@ class SimulateWorkerGazebo:
                 return False
             elif chosen_part is None:
                 return False
-            
-            print("CHOSEN PART: ", chosen_part)
 
             target_poses = self.generate_place_pose(number_of_poses=10, min_dist=0.2)
 
