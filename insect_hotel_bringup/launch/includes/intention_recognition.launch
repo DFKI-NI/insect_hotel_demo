@@ -12,14 +12,16 @@
     <arg name="problem_setup" default="HotelA.json" doc=""/>
     <arg name="mockup_gui" value="false" />
 
-
+    <!-- spawn cameras in simulation -->
     <group if="$(arg simulation)">
-        <!-- spawn cameras in simulation -->
         <include file="$(find insect_hotel_bringup)/launch/includes/simulated_cameras.launch" />
         <node name="sim_worker" pkg="insect_hotel_bringup" type="simulate_worker_gazebo.py" output="screen">
-            <param name="worker_time_between_actions" value="20.0" />
-            <param name="random_worker_actions" value="False" />
+            <param name="worker_time_between_actions" value="30.0" />
+            <param name="random_worker_actions" value="True" />
             <param name="prob_to_skip_action" value="0.2" />
+            <param name="prob_to_take_wrong_part" value="0.8" />
+            <param name="prob_to_fix_wrong_part" value="0.5" />
+            <param name="hotel_type" value="1" />
             <rosparam command="load" file="$(find insect_hotel_bringup)/config/bounding_boxes.yaml" ns="bounding_boxes"/>
             <rosparam command="load" file="$(find insect_hotel_bringup)/config/parts_in_storage.yaml" ns="parts_in_storage"/>
         </node>
@@ -34,9 +36,9 @@
         <param name="inventory_cam_detection_topic" value="$(arg inventory_cam_detection_topic)" />
         <param name="intention_recognition_node_name" value="$(arg intention_recognition_node_name)"/>
         <param name="simulation" value="$(arg simulation)" />
-        <param name="storage_observation_accuracy" value="1.0" />
-        <param name="assembly_progress_accuracy" value="1.0" />
-        <param name="hotel_type_accuracy" value="1.0" />
+        <param name="storage_observation_accuracy" value="0.95" />
+        <param name="assembly_progress_accuracy" value="0.95" />
+        <param name="hotel_type_accuracy" value="0.95" />
     </node>
 
     <!-- hierarchical planning task server: handles requests from intention recognition to bring parts using the robot -->

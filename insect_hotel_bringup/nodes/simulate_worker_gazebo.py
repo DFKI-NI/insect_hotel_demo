@@ -34,6 +34,9 @@ class SimulateWorkerGazebo:
         )
         
         self.prob_to_skip_action = rospy.get_param("~prob_to_skip_action", default=0.8)
+        self.prob_to_take_wrong_part = rospy.get_param("~prob_to_take_wrong_part", default=0.1)
+        self.prob_to_fix_wrong_part = rospy.get_param("~prob_to_fix_wrong_part", default=0.7)
+        self.hotel_type = rospy.get_param("~hotel_type", default=1)
 
         # load xacro files for insect hotel parts
         insect_hotel_parts_folder = os.path.join(
@@ -112,26 +115,12 @@ class SimulateWorkerGazebo:
         }
 
         self.parts_in_storage = []
-        self.hotel_type = 0
-
-        parts_in_storage = rospy.get_param("~parts_in_storage", default="/sim_worker/parts_in_storage")
-        for part, amount in parts_in_storage.items():
-            for i in range(amount):
-                self.spawn_gazebo_object(part + "_" + str(i + 2), *self.part_in_storage_pose[part])
-                self.parts_in_storage.append(part + "_" + str(i + 2))
-                if part == "red_part":
-                    self.hotel_type = 0
-                elif part == "orange_part":
-                    self.hotel_type = 1
-
+        self.parts_in_storage_ids = []
         self.parts_on_assembly = []
-
-        self.table_1_place_plane = [
-            Point(18.05, 14.9, 0.721),
-            Point(18.55, 14.9, 0.721),
-            Point(18.55, 14.6, 0.721),
-            Point(18.05, 14.6, 0.721),
-        ]
+        self.hotel_type_a_parts = [0, 1, 2, 3, 4, 5]
+        self.hotel_type_b_parts = [0, 3, 4, 5, 6, 7]
+        self.wrong_part_assembled = []
+        self.finished = False
 
         self.container_objs = ["klt"]
         self.part_objs = [
@@ -144,6 +133,22 @@ class SimulateWorkerGazebo:
             "orange_part",
             "black_part",
         ]
+        self.placed_parts_poses = []
+
+        parts_in_storage = rospy.get_param("~parts_in_storage", default="/sim_worker/parts_in_storage")
+        for part, amount in parts_in_storage.items():
+            for i in range(amount):
+                #self.spawn_gazebo_object(part + "_" + str(i + 2), *self.part_in_storage_pose[part])
+                self.parts_in_storage.append(part + "_" + str(i + 2))
+                self.parts_in_storage_ids.append(self.part_objs.index(part))
+
+        self.table_1_place_plane = [
+            Point(18.05, 14.9, 0.721),
+            Point(18.55, 14.9, 0.721),
+            Point(18.55, 14.6, 0.721),
+            Point(18.05, 14.6, 0.721),
+        ]
+
 
     def receive_model_states(self):
         try:
@@ -282,32 +287,62 @@ class SimulateWorkerGazebo:
 
     def perform_action(self, random_order: bool = False) -> bool:
         try:
+            # if a wrong part is on the assembly table, move part back to storage with given probability
+            if self.wrong_part_assembled and random.random() < self.prob_to_fix_wrong_part:
+                self.part_to_storage(self.wrong_part_assembled.pop())
+                print("FIXED WRONG PART: ", self.wrong_part_assembled)
+                return True
+            
+            if self.hotel_type == 1:
+                available_wrong_parts = [p for p in self.hotel_type_b_parts if p not in self.hotel_type_a_parts and p in self.parts_in_storage_ids]
+                available_correct_parts = list(set(self.hotel_type_a_parts) & set(self.parts_in_storage_ids))
+            elif self.hotel_type == 2:
+                available_wrong_parts = [p for p in self.hotel_type_a_parts if p not in self.hotel_type_b_parts and p in self.parts_in_storage_ids]
+                available_correct_parts = list(set(self.hotel_type_b_parts) & set(self.parts_in_storage_ids))
+
             if random_order:
-                parts_in_storage = numpy.random.permutation(self.parts_in_storage)
-            else:
-                parts_in_storage = deepcopy(self.parts_in_storage)
+                available_correct_parts = numpy.random.permutation(available_correct_parts)
+
+            print("WRONG PARTS: ", available_wrong_parts)
+            print("AVAILABLE CORRECT PARTS: ", available_correct_parts)
+
             chosen_part = None
-            for part in parts_in_storage:
-                if part[:-2] not in self.parts_on_assembly:
-                    if part[:-2] == "red_part" and self.hotel_type != 0:
-                        continue
-                    elif part[:-2] == "orange_part" and self.hotel_type != 1:
-                        continue
-                    else:
-                        chosen_part = part
+            if available_wrong_parts and random.random() < self.prob_to_take_wrong_part:
+                random_wrong_part = random.choice(available_wrong_parts)
+                chosen_part = [p for p in self.parts_in_storage if self.part_objs[random_wrong_part] in p][0]
+                self.wrong_part_assembled.append(chosen_part)
+            else:
+                for part in available_correct_parts:
+                    chosen_part = [p for p in self.parts_in_storage if self.part_objs[part] in p][0]
+                    if chosen_part not in self.parts_on_assembly:
                         break
-            if chosen_part is None:
+            if available_correct_parts.size <= 0 and len(self.wrong_part_assembled) <= 0:
+                self.finished = True
                 return False
+            elif chosen_part is None:
+                return False
+            
+            print("CHOSEN PART: ", chosen_part)
 
             target_poses = self.generate_place_pose(number_of_poses=10, min_dist=0.2)
 
-            result = self.set_model_state(chosen_part, target_poses[0])
-            if result:
+            result = None
+            if target_poses:
+                result = self.set_model_state(chosen_part, target_poses[0])
+            if result is not None:
                 self.parts_on_assembly.append(chosen_part[:-2])
+                self.parts_in_storage_ids.remove(self.part_objs.index(chosen_part[:-2]))
                 self.parts_in_storage.remove(chosen_part)
+                self.placed_parts_poses.append(target_poses[0])
             return result
         except IndexError:
             return False
+        
+    def part_to_storage(self, part_name) -> bool:
+        self.set_model_state(part_name, self.part_in_storage_pose[part_name[:-2]][1])
+        self.parts_in_storage.append(part_name)
+        self.parts_in_storage_ids.append(self.part_objs.index(part_name[:-2]))
+        return True
 
     def move_parts_brought_by_robot(self) -> bool:
         facts = self.create_facts(self.get_model_states_from_gazebo(), "table_1")
@@ -319,11 +354,7 @@ class SimulateWorkerGazebo:
             ):
                 for in_fact in facts:
                     if in_fact.name == "in" and fact.values[0] == in_fact.values[1]:
-                        self.set_model_state(
-                            in_fact.values[0],
-                            self.part_in_storage_pose[in_fact.values[0][:-2]][1] #self.create_pose_obj(18.45, 14.0, 0.8, 0.0, 0.0, 0.0),
-                        )
-                        self.parts_in_storage.append(in_fact.values[0])
+                        self.part_to_storage(in_fact.values[0])
                         break
                 self.set_model_state(
                     fact.values[0],
@@ -334,6 +365,9 @@ class SimulateWorkerGazebo:
 
     def generate_place_pose(self, number_of_poses: int = 10, min_dist: float = 0.2):
         x_y_list = []
+        # add already placed parts to x_y_list
+        for part_pose in self.placed_parts_poses:
+            x_y_list.append([part_pose.position.x, part_pose.position.y])
         place_poses_list = []
         for _ in range(1, number_of_poses + 1):
             count = 0
@@ -378,8 +412,11 @@ class SimulateWorkerGazebo:
                 self.move_parts_brought_by_robot()
 
                 skip = random.random() < self.prob_to_skip_action
-                if not skip:
+                if not skip and not self.finished:
                     action_result = self.perform_action(self.random_worker_actions)
+                if self.finished:
+                    print(f"Finished assembling hotel type {'A' if self.hotel_type == 1 else 'B'}.")
+                    break
         except rospy.ROSInterruptException as e:
             print(e)
 
