@@ -292,12 +292,15 @@ class SimulateWorkerGazebo:
                 self.part_to_storage(self.wrong_part_assembled.pop())
                 return True
             
+            type_parts = []
             if self.hotel_type == 1:
                 available_wrong_parts = [p for p in self.hotel_type_b_parts if p not in self.hotel_type_a_parts and p in self.parts_in_storage_ids]
                 available_correct_parts = list(set(self.hotel_type_a_parts) & set(self.parts_in_storage_ids))
+                type_parts = set([self.part_objs[p] for p in self.hotel_type_a_parts])
             elif self.hotel_type == 2:
                 available_wrong_parts = [p for p in self.hotel_type_a_parts if p not in self.hotel_type_b_parts and p in self.parts_in_storage_ids]
                 available_correct_parts = list(set(self.hotel_type_b_parts) & set(self.parts_in_storage_ids))
+                type_parts = set([self.part_objs[p] for p in self.hotel_type_b_parts])
 
             if random_order:
                 available_correct_parts = numpy.random.permutation(available_correct_parts)
@@ -312,7 +315,7 @@ class SimulateWorkerGazebo:
                     chosen_part = [p for p in self.parts_in_storage if self.part_objs[part] in p][0]
                     if chosen_part not in self.parts_on_assembly:
                         break
-            if available_correct_parts.size <= 0 and len(self.wrong_part_assembled) <= 0:
+            if available_correct_parts.size <= 0 and len(self.wrong_part_assembled) <= 0 and type_parts.issubset(self.parts_on_assembly):
                 self.finished = True
                 return False
             elif chosen_part is None:
