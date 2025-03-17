@@ -25,6 +25,10 @@ class SimulateWorkerGazebo:
     def __init__(self):
         rospy.init_node("simulate_worker_gazebo_node")
 
+        self.time_waited = 0.0
+        self.num_mistakes = 0
+        self.num_skipped_actions = 0
+
         # Time in seconds between each simulated worker action
         self.worker_time_between_actions = rospy.get_param(
             "~worker_time_between_actions", default=30.0
@@ -306,27 +310,35 @@ class SimulateWorkerGazebo:
                 available_correct_parts = numpy.random.permutation(available_correct_parts)
 
             chosen_part = None
+            # take wrong part with given probability
             if available_wrong_parts and random.random() < self.prob_to_take_wrong_part:
                 random_wrong_part = random.choice(available_wrong_parts)
                 chosen_part = [p for p in self.parts_in_storage if self.part_objs[random_wrong_part] in p][0]
                 self.wrong_part_assembled.append(chosen_part)
+                self.num_mistakes += 1
             else:
+                # take correct part from available parts
                 for part in available_correct_parts:
                     chosen_part = [p for p in self.parts_in_storage if self.part_objs[part] in p][0]
-                    if chosen_part not in self.parts_on_assembly:
+                    if chosen_part[:-2] not in self.parts_on_assembly:
                         break
-            if available_correct_parts.size <= 0 and len(self.wrong_part_assembled) <= 0 and type_parts.issubset(self.parts_on_assembly):
+            # check if the hotel is finished, no correct parts available and no wrong parts assembled
+            if len(self.wrong_part_assembled) <= 0 and type_parts.issubset(self.parts_on_assembly):
                 self.finished = True
-                return False
-            elif chosen_part is None:
+                return True
+            # nothing to do, waiting for parts
+            elif chosen_part is None or chosen_part[:-2] in self.parts_on_assembly:
                 return False
 
+            # generate poses to move the chosen part to
             target_poses = self.generate_place_pose(number_of_poses=10, min_dist=0.2)
 
             result = None
             if target_poses:
+                # move the chosen part to the generated pose
                 result = self.set_model_state(chosen_part, target_poses[0])
             if result is not None:
+                # update internal part states
                 self.parts_on_assembly.append(chosen_part[:-2])
                 self.parts_in_storage_ids.remove(self.part_objs.index(chosen_part[:-2]))
                 self.parts_in_storage.remove(chosen_part)
@@ -405,15 +417,25 @@ class SimulateWorkerGazebo:
 
         try:
             while not rospy.is_shutdown():
+                action_start_time = rospy.get_rostime()
                 rate.sleep()
                 self.move_parts_brought_by_robot()
 
                 skip = random.random() < self.prob_to_skip_action
+                if skip:
+                    self.num_skipped_actions += 1
                 if not skip and not self.finished:
                     action_result = self.perform_action(self.random_worker_actions)
                 if self.finished:
+                    print("-----------------------------------------------------------------------")
                     print(f"Finished assembling hotel type {'A' if self.hotel_type == 1 else 'B'}.")
+                    print(f"Number of skipped actions: {self.num_skipped_actions}")
+                    print(f"Number of mistakes: {self.num_mistakes}")
+                    print(f"Time waited: {self.time_waited}")
+                    print("------------------------------------------------------------------------")
                     break
+                if not action_result:
+                    self.time_waited += (rospy.get_rostime() - action_start_time).to_sec()
         except rospy.ROSInterruptException as e:
             print(e)
 
