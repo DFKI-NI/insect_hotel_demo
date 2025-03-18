@@ -7,8 +7,8 @@ import tf
 import xacro
 import random
 import numpy
-from yaml import safe_load, YAMLError
 from copy import deepcopy
+from enum import Enum
 
 from gazebo_msgs.srv import SetModelState, SpawnModel
 from gazebo_msgs.msg import ModelState, ModelStates
@@ -20,6 +20,10 @@ from symbolic_fact_generation.common.collision_checking import (
 )
 from symbolic_fact_generation.common.fact import Fact
 
+
+class WorkerState(Enum):
+    WAITING = 0
+    ASSEMBLING = 1
 
 class SimulateWorkerGazebo:
     def __init__(self):
@@ -289,11 +293,13 @@ class SimulateWorkerGazebo:
 
         return pose
 
-    def perform_action(self, random_order: bool = False) -> bool:
+    def perform_action(self, random_order: bool = False):
         try:
             # if a wrong part is on the assembly table, move part back to storage with given probability
-            if self.wrong_part_assembled and random.random() < self.prob_to_fix_wrong_part:
-                self.part_to_storage(self.wrong_part_assembled.pop())
+            if len(self.wrong_part_assembled) > 0 and random.random() < self.prob_to_fix_wrong_part:
+                wrong_part = self.wrong_part_assembled.pop()
+                self.part_to_storage(wrong_part)
+                self.parts_on_assembly.remove(wrong_part[:-2])
                 return True
             
             type_parts = []
@@ -326,10 +332,12 @@ class SimulateWorkerGazebo:
             if len(self.wrong_part_assembled) <= 0 and type_parts.issubset(self.parts_on_assembly):
                 self.finished = True
                 return True
+            # no part available, but wrong parts are still on the assembly table, do nothing
+            elif chosen_part is None and len(self.wrong_part_assembled) > 0:
+                return True
             # nothing to do, waiting for parts
             elif chosen_part is None or chosen_part[:-2] in self.parts_on_assembly:
                 return False
-
             # generate poses to move the chosen part to
             target_poses = self.generate_place_pose(number_of_poses=10, min_dist=0.2)
 
@@ -344,16 +352,17 @@ class SimulateWorkerGazebo:
                 self.parts_in_storage.remove(chosen_part)
                 self.placed_parts_poses.append(target_poses[0])
             return result
-        except IndexError:
-            return False
+        except IndexError as e:
+            print(e)
+            return None
         
     def part_to_storage(self, part_name) -> bool:
         self.set_model_state(part_name, self.part_in_storage_pose[part_name[:-2]][1])
         self.parts_in_storage.append(part_name)
         self.parts_in_storage_ids.append(self.part_objs.index(part_name[:-2]))
         return True
-
-    def move_parts_brought_by_robot(self) -> bool:
+    
+    def new_parts_brought_by_robot(self):
         facts = self.create_facts(self.get_model_states_from_gazebo(), "table_1")
         for fact in facts:
             if (
@@ -363,13 +372,20 @@ class SimulateWorkerGazebo:
             ):
                 for in_fact in facts:
                     if in_fact.name == "in" and fact.values[0] == in_fact.values[1]:
-                        self.part_to_storage(in_fact.values[0])
-                        break
-                self.set_model_state(
-                    fact.values[0],
-                    self.create_pose_obj(17.23, 15.65, 1.0, 0.0, 0.0, 0.0),
-                )
-                return True
+                        return (True, fact.values[0], in_fact.values[0])
+        return (False, None, None)
+
+    def move_parts_brought_by_robot(self) -> bool:
+        new_parts = self.new_parts_brought_by_robot()
+        if new_parts[0]:
+            # sleep a little so that the robot has time to move the arm
+            rospy.sleep(5.0)
+            self.part_to_storage(new_parts[2])
+            self.set_model_state(
+                new_parts[1],
+                self.create_pose_obj(17.23, 15.65, 1.0, 0.0, 0.0, 0.0),
+            )
+            return True
         return False
 
     def generate_place_pose(self, number_of_poses: int = 10, min_dist: float = 0.2):
@@ -414,28 +430,38 @@ class SimulateWorkerGazebo:
 
     def run(self):
         rate = rospy.Rate(1.0 / self.worker_time_between_actions)
+        waiting_rate = rospy.Rate(0.5) # 2 seconds
+
+        worker_state = WorkerState.ASSEMBLING
 
         try:
             while not rospy.is_shutdown():
                 action_start_time = rospy.get_rostime()
-                rate.sleep()
-                self.move_parts_brought_by_robot()
+                if worker_state == WorkerState.ASSEMBLING:
+                    rate.sleep()
+                    self.move_parts_brought_by_robot()
 
-                skip = random.random() < self.prob_to_skip_action
-                if skip:
-                    self.num_skipped_actions += 1
-                if not skip and not self.finished:
-                    action_result = self.perform_action(self.random_worker_actions)
-                if self.finished:
-                    print("-----------------------------------------------------------------------")
-                    print(f"Finished assembling hotel type {'A' if self.hotel_type == 1 else 'B'}.")
-                    print(f"Number of skipped actions: {self.num_skipped_actions}")
-                    print(f"Number of mistakes: {self.num_mistakes}")
-                    print(f"Time waited: {self.time_waited}")
-                    print("------------------------------------------------------------------------")
-                    break
-                if not action_result:
+                    skip = random.random() < self.prob_to_skip_action
+                    if skip:
+                        self.num_skipped_actions += 1
+                    if not skip and not self.finished:
+                        action_result = self.perform_action(self.random_worker_actions)
+                    if self.finished:
+                        print("-----------------------------------------------------------------------")
+                        print(f"Finished assembling hotel type {'A' if self.hotel_type == 1 else 'B'}.")
+                        print(f"Number of skipped actions: {self.num_skipped_actions}")
+                        print(f"Number of mistakes: {self.num_mistakes}")
+                        print(f"Time waited: {self.time_waited}")
+                        print("------------------------------------------------------------------------")
+                        break
+                    if action_result is not None and not action_result:
+                        self.time_waited += (rospy.get_rostime() - action_start_time).to_sec()
+                        worker_state = WorkerState.WAITING
+                elif worker_state == WorkerState.WAITING:
+                    waiting_rate.sleep()
                     self.time_waited += (rospy.get_rostime() - action_start_time).to_sec()
+                    if self.move_parts_brought_by_robot():
+                        worker_state = WorkerState.ASSEMBLING
         except rospy.ROSInterruptException as e:
             print(e)
 
