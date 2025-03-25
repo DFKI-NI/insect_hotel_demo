@@ -25,6 +25,15 @@ class WorkerState(Enum):
     WAITING = 0
     ASSEMBLING = 1
 
+class ActionResult(Enum):
+    ASSEMBLED_CORRECT_PART = 0
+    ASSEMBLED_WRONG_PART = 1
+    CORRECTED_WRONG_PART = 2
+    MOVING_PART_FAILED = 3
+    WRONG_PARTS_AVAILABLE_NO_CORRECT_PARTS = 4
+    NOTHING_TO_DO = 5
+    FINISHED = 6
+
 class SimulateWorkerGazebo:
     def __init__(self):
         rospy.init_node("simulate_worker_gazebo_node")
@@ -293,14 +302,14 @@ class SimulateWorkerGazebo:
 
         return pose
 
-    def perform_action(self, random_order: bool = False):
+    def perform_action(self, random_order: bool = False) -> ActionResult:
         try:
             # if a wrong part is on the assembly table, move part back to storage with given probability
             if len(self.wrong_part_assembled) > 0 and random.random() < self.prob_to_fix_wrong_part:
                 wrong_part = self.wrong_part_assembled.pop()
                 self.part_to_storage(wrong_part)
                 self.parts_on_assembly.remove(wrong_part[:-2])
-                return True
+                return ActionResult.CORRECTED_WRONG_PART
             
             type_parts = []
             if self.hotel_type == 1:
@@ -316,42 +325,54 @@ class SimulateWorkerGazebo:
                 available_correct_parts = numpy.random.permutation(available_correct_parts)
 
             chosen_part = None
+            result = None
+            wrong_part_chosen = False
             # take wrong part with given probability
-            if available_wrong_parts and random.random() < self.prob_to_take_wrong_part:
+            if len(available_wrong_parts) > 0 and random.random() < self.prob_to_take_wrong_part:
                 random_wrong_part = random.choice(available_wrong_parts)
                 chosen_part = [p for p in self.parts_in_storage if self.part_objs[random_wrong_part] in p][0]
-                self.wrong_part_assembled.append(chosen_part)
-                self.num_mistakes += 1
+                wrong_part_chosen = True
+                result = ActionResult.ASSEMBLED_WRONG_PART
             else:
                 # take correct part from available parts
                 for part in available_correct_parts:
                     chosen_part = [p for p in self.parts_in_storage if self.part_objs[part] in p][0]
                     if chosen_part[:-2] not in self.parts_on_assembly:
+                        result = ActionResult.ASSEMBLED_CORRECT_PART
                         break
+                    else:
+                        chosen_part = None
             # check if the hotel is finished, no correct parts available and no wrong parts assembled
             if len(self.wrong_part_assembled) <= 0 and type_parts.issubset(self.parts_on_assembly):
                 self.finished = True
-                return True
+                return ActionResult.FINISHED
             # no part available, but wrong parts are still on the assembly table, do nothing
             elif chosen_part is None and len(self.wrong_part_assembled) > 0:
-                return True
+                return ActionResult.WRONG_PARTS_AVAILABLE_NO_CORRECT_PARTS
             # nothing to do, waiting for parts
             elif chosen_part is None or chosen_part[:-2] in self.parts_on_assembly:
-                return False
+                if len(self.wrong_part_assembled) > 0:
+                    return ActionResult.WRONG_PARTS_AVAILABLE_NO_CORRECT_PARTS
+                else:
+                    return ActionResult.NOTHING_TO_DO
             # generate poses to move the chosen part to
             target_poses = self.generate_place_pose(number_of_poses=10, min_dist=0.2)
 
-            result = None
             if target_poses:
                 # move the chosen part to the generated pose
-                result = self.set_model_state(chosen_part, target_poses[0])
-            if result is not None:
+                moving_part_result = self.set_model_state(chosen_part, target_poses[0])
+            if result is not None and moving_part_result:
                 # update internal part states
                 self.parts_on_assembly.append(chosen_part[:-2])
                 self.parts_in_storage_ids.remove(self.part_objs.index(chosen_part[:-2]))
                 self.parts_in_storage.remove(chosen_part)
                 self.placed_parts_poses.append(target_poses[0])
-            return result
+                if wrong_part_chosen:
+                    self.wrong_part_assembled.append(chosen_part)
+                    self.num_mistakes += 1
+                return result
+            else:
+                return ActionResult.MOVING_PART_FAILED
         except IndexError as e:
             print(e)
             return None
@@ -444,6 +465,7 @@ class SimulateWorkerGazebo:
                     skip = random.random() < self.prob_to_skip_action
                     if skip:
                         self.num_skipped_actions += 1
+                        continue
                     if not skip and not self.finished:
                         action_result = self.perform_action(self.random_worker_actions)
                     if self.finished:
@@ -454,7 +476,7 @@ class SimulateWorkerGazebo:
                         print(f"Time waited: {self.time_waited}")
                         print("------------------------------------------------------------------------")
                         break
-                    if action_result is not None and not action_result:
+                    if action_result is not None and action_result == ActionResult.NOTHING_TO_DO:
                         self.time_waited += (rospy.get_rostime() - action_start_time).to_sec()
                         worker_state = WorkerState.WAITING
                 elif worker_state == WorkerState.WAITING:
