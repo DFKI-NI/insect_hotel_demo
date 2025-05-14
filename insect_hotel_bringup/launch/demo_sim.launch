@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
-  <arg name="world" default="pbr_cic" doc="options: pbr_moelk, pbr_cic" />
-  <arg name="world_config" default="insect_hotel" doc="objects arrangement, options: moelk_tables, cic_tables, truck_assembly, insect_hotel" />
+  <arg name="world" default="pbr_cic" doc="options: pbr_cic" />
+  <arg name="world_config" default="insect_hotel" doc="objects arrangement, options: insect_hotel, insect_hotel_tables_spread" />
 
   <!-- the pose where to spawn the robot in simulation -->
   <arg name="robot_x"   default="20.00" />
@@ -47,7 +47,7 @@
     <arg name="base_frame_id" value="mobipick/base_footprint" />
   </include>
   <!-- navigation stack (move base) -->
-  <include file="$(find insect_hotel_bringup)/launch/includes/navigation/cic_insect_hotel_sim.launch"/>
+  <include file="$(find insect_hotel_bringup)/launch/includes/navigation/$(arg world_config).launch"/>
 
   <!-- ::::: Manipulation , MoveIt: arm movement ::::: -->
   <include file="$(find mobipick_moveit_config)/launch/moveit_planning_execution.launch">
