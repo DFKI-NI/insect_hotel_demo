@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
   <arg name="world" default="pbr_cic" doc="options: pbr_cic" />
-  <arg name="world_config" default="insect_hotel" doc="objects arrangement, options: insect_hotel, insect_hotel_tables_spread" />
+  <arg name="world_config" default="insect_hotel_tables_spread" doc="objects arrangement, options: insect_hotel, insect_hotel_tables_spread" />
 
   <!-- the pose where to spawn the robot in simulation -->
   <arg name="robot_x"   default="20.00" />
