@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
   <arg name="simulation" default="false" />
-  <arg name="world_config" default="cic_tables" doc="objects arrangement, options: moelk_tables, cic_tables, truck_assembly" />
+  <arg name="world_config" default="insect_hotel" doc="objects arrangement, options: insect_hotel, insect_hotel_tables_spread" />
   <arg name="objects_of_interest" default="[klt, red_part, yellow_part, bright_green_part, dark_green_part, purple_part, magenta_part, black_part, orange_part]"/>
 
   <arg name="allow_search_same_table" default="true" doc="allows to search tables again without restarting the planning domain, only works when using hierarchical planning"/>
@@ -29,11 +29,6 @@
 
     <!-- force torque observer -->
     <node name="ft_observer" pkg="mobipick_pick_n_place" type="ft_observer_sim.py" ns="mobipick" output="screen" />
-
-    <!-- ::::: Grasp planning ::::: -->
-    <include file="$(find tables_demo_bringup)/launch/includes/grasp_planning.launch">
-      <arg name="planning_scene_config" value="$(find insect_hotel_bringup)/config/$(arg world_config)_planning_scene.yaml" />
-    </include>
   </group>
 
   <group unless="$(arg simulation)">
@@ -50,12 +45,12 @@
 
     <!-- color classification -->
     <include file="$(find insect_hotel_bringup)/launch/includes/color_classification.launch"/>
-  
-    <!-- ::::: Grasp planning ::::: -->
-    <include file="$(find tables_demo_bringup)/launch/includes/grasp_planning.launch">
-      <arg name="planning_scene_config" value="$(find tables_demo_bringup)/config/$(arg world_config)_planning_scene.yaml" />
-    </include>
   </group>
+
+  <!-- ::::: Grasp planning ::::: -->
+  <include file="$(find tables_demo_bringup)/launch/includes/grasp_planning.launch">
+    <arg name="planning_scene_config" value="$(find insect_hotel_bringup)/config/$(arg world_config)_planning_scene.yaml" />
+  </include>
 
   <!-- ::::: Place object ::::: -->
   <include file="$(find tables_demo_bringup)/launch/includes/place.launch">
@@ -66,13 +61,7 @@
   <include file="$(find tables_demo_bringup)/launch/includes/insert.launch"/>
 
   <!-- config for tables_demo_planning -->
-  <group if="$(arg simulation)">
-    <rosparam command="load" file="$(find mobipick_pick_n_place)/config/cic_insect_hotel_sim_demo.yaml" ns="mobipick/tables_demo_planning" />
-  </group>
-  <group unless="$(arg simulation)">
-    <rosparam command="load" file="$(find mobipick_pick_n_place)/config/$(arg world_config)_demo.yaml" ns="mobipick/tables_demo_planning" />
-  </group>
-  
+  <rosparam command="load" file="$(find insect_hotel_bringup)/config/$(arg world_config)_demo.yaml" ns="mobipick/tables_demo_planning" />
   <!-- config for items used in the demos-->
   <rosparam command="load" file="$(find insect_hotel_bringup)/config/initial_items.yaml" ns="mobipick/tables_demo_planning" />
   <rosparam param="allow_search_same_table" ns="mobipick/tables_demo_planning" subst_value="True">$(arg allow_search_same_table)</rosparam>
