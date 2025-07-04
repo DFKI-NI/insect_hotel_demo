@@ -1,5 +1,15 @@
 # Insect Hotel Demo
 
+## Installation
+
+ROS Noetic and Python 3 are assumed to be available on your system. [vcs](https://pypi.org/project/vcstool/) and
+[wstool](http://wiki.ros.org/wstool) will be installed when needed:
+
+```bash
+./install-deps.sh
+./build.sh
+```
+
 ## Setup and Usage
 
 ### Real Robot Demo
