@@ -45,6 +45,21 @@ roslaunch insect_hotel_bringup demo_sim.launch   # world_config:=insect_hotel_ta
 roslaunch insect_hotel_bringup intention_recognition.launch simulation:=true
 ```
 
+### Worker Simulation
+
+The behavior of the worker is simulated by moving insect hotel parts
+from the storage area to the assembly area. Inside the
+`insect_hotel_bringup/launch/includes/intention_recognition.launch` these
+[lines](https://github.com/DFKI-NI/insect_hotel_demo/blob/4d4905c4b31c079af8c827a242ab512e481d5b03/insect_hotel_bringup/launch/includes/intention_recognition.launch#L18-L27)
+modify the simulated workers behavior. The following parameters can be changed:
+
+- hotel_type: Specify hotel type 1 or 2, type 1 uses red side panel and dark green back panel, type 2 uses orange side panel and black back panel
+- worker_time_between_actions: Time in seconds between taking parts from the storage
+- random_worker_actions: If true takes parts from storage randomly, if false takes parts in fixed assembly order
+- prob_to_skip_action: Probability for the worker to do nothing and skip an assembly action
+- prob_to_take_wrong_part: Probability for the worker to take a wrong part, e.g. a part that does not belong to the insect hotel type that is currently being built
+- prob_to_fix_wrong_part: Probability to fix the workers mistakes, if any occured
+
 ### Plan Visualization
 
 Install and source the
