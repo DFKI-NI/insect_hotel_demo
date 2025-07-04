@@ -11,7 +11,6 @@
 
   <buildtool_depend>catkin</buildtool_depend>
 
-  <exec_depend>color_based_activity_recognition</exec_depend>
   <exec_depend>daa_color_classification</exec_depend>
   <exec_depend>daa_tools</exec_depend>
   <exec_depend>intention_recognition_ros</exec_depend>
