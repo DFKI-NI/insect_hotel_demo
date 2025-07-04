@@ -31,7 +31,7 @@
     <arg name="task_server_name" default="/mobipick/task_planning"/>
 
     <!-- activity recognition server: handles observation requests from intention recognition POMDP module -->
-    <node pkg="color_based_activity_recognition" type="activity_recognition_node" name="intention_perception_node" output="screen">
+    <node pkg="intention_recognition_ros" type="activity_recognition_node" name="intention_perception_node" output="screen">
         <param name="worker_cam_detection_topic" value="$(arg worker_cam_detection_topic)" />
         <param name="inventory_cam_detection_topic" value="$(arg inventory_cam_detection_topic)" />
         <param name="intention_recognition_node_name" value="$(arg intention_recognition_node_name)"/>
