@@ -2,7 +2,7 @@
 
 This repository contains the source code to replicate the demo scenario described in:
 
-J.C. Saborío, M. Vinci, O. Lima, S. Stock, L. Niecksch, M. Günther, A. Sung, J. Hertzberg and M. Atzmüller. "Uncertainty-Resilient Active Intention Recognition for Robotic Assistants". On Proceedings of ECMR 2025 (to appear).
+J.C. Saborío, M. Vinci, O. Lima, S. Stock, L. Niecksch, M. Günther, A. Sung, J. Hertzberg and M. Atzmüller. "Uncertainty-Resilient Active Intention Recognition for Robotic Assistants". In Proceedings of ECMR 2025 (to appear).
  
 ## Video
 
