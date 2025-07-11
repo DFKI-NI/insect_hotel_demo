@@ -1,4 +1,12 @@
-# Insect Hotel Demo
+# Active Goal Recognition on the Insect Hotel Scenario
+
+This repository contains the source code to replicate the demo scenario described in:
+
+J.C. Saborío, M. Vinci, O. Lima, S. Stock, L. Niecksch, M. Günther, A. Sung, J. Hertzberg and M. Atzmüller. "Uncertainty-Resilient Active Intention Recognition for Robotic Assistants". On Proceedings of ECMR 2025 (to appear).
+ 
+## Video
+
+We are preparing a detailed video showcasing the Mobipick robot in the Insect Hotel domain. A link will be added here as soon as it is ready.
 
 ## Installation
 
